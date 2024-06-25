@@ -1,0 +1,81 @@
+
+services:
+  api:
+    build:
+      context: ./mart
+      dockerfile: Dockerfile
+    container_name: api
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./mart:/code/"
+    depends_on:
+      - auth
+      - postgres_db
+    environment:
+      - BACKEND_HOST=http://auth:8000
+    networks:
+      - basic-mart-network
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile
+    container_name: auth
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./auth:/code
+    depends_on:
+      - postgres_db
+      - smtp-service
+    networks:
+      - basic-mart-network
+
+  payment:
+    build:
+      context: ./payment
+      dockerfile: dockerfile.payment
+    container_name: payment
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./payment:/code
+    depends_on:
+      - postgres_db
+      - smtp-service
+    networks:
+      - basic-mart-network
+
+  postgres_db:
+    image: postgres:latest
+    restart: always
+    container_name: db
+    environment:
+      - POSTGRES_USER=shoaib
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    networks:
+      - basic-mart-network
+
+  smtp-service:
+    image: axllent/mailpit
+    restart: unless-stopped
+    container_name: smtp
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - basic-mart-network
+
+volumes:
+  postgres_db:
+    driver: local
+
+networks:
+  basic-mart-network:
+    driver: bridge
